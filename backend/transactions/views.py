@@ -1,40 +1,53 @@
 from rest_framework import generics, permissions
-from .models import Transaction
-from .serializers import TransactionSerializer
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.contrib.auth.models import User
 
+from .models import Transaction
+from .serializers import TransactionSerializer, RegisterSerializer
+
+# 1. Handle List and Create with User-Level Security
 class TransactionListCreate(generics.ListCreateAPIView):
     """
     Handles GET (list transactions) and POST (create transaction).
-    This aligns with the 'centralized interface' mentioned in the proposal.
+    Restricted to authenticated users only.
     """
     serializer_class = TransactionSerializer
-    
-    # In the final version, you will uncomment this to ensure 
-    # users only see their own financial data.
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """
-        Optionally restricts the returned transactions to a given user,
-        by filtering against a `user` query parameter in the URL.
+        Only returns transactions belonging to the currently logged-in user.
         """
-        queryset = Transaction.objects.all()
-        user_id = self.request.query_params.get('user')
-        if user_id is not None:
-            queryset = queryset.filter(user__id=user_id)
-        return queryset
+        return Transaction.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
         """
-        Saves the transaction. You can add logic here to 
-        automatically associate the transaction with a user.
+        Automatically links the new transaction to the logged-in user.
         """
-        serializer.save()
+        serializer.save(user=self.request.user)
 
+
+# 2. Handle Individual Transactions (Update/Delete) with Security
 class TransactionDetail(generics.RetrieveUpdateDestroyAPIView):
     """
     Handles GET (single), PUT (update), and DELETE.
-    Useful for the 'interactive element' of the Budgetly dashboard.
+    Ensures a user can't edit or delete someone else's transaction.
     """
-    queryset = Transaction.objects.all()
     serializer_class = TransactionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Restricts the scope so you can only 'find' your own transactions.
+        """
+        return Transaction.objects.filter(user=self.request.user)
+
+
+# 3. Public Registration View
+class RegisterView(generics.CreateAPIView):
+    """
+    Allows anyone to create a new account.
+    """
+    queryset = User.objects.all()
+    permission_classes = [AllowAny]
+    serializer_class = RegisterSerializer
