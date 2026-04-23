@@ -4,7 +4,7 @@ import { Form, Button, Card, Row, Col, Alert } from 'react-bootstrap';
 const TransactionForm = ({ onTransactionAdded }) => {
     const [formData, setFormData] = useState({
         amount: '',
-        description: '',
+        title: '',
         category: 'Food', // Default category
         date: new Date().toISOString().split('T')[0] // Defaults to today
     });
@@ -38,7 +38,7 @@ const TransactionForm = ({ onTransactionAdded }) => {
                 // Clear the form
                 setFormData({
                     amount: '',
-                    description: '',
+                    title: '',
                     category: 'Food',
                     date: new Date().toISOString().split('T')[0]
                 });
