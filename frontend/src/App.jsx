@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom'; // Added useNavigate
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Import your pages
@@ -9,8 +9,8 @@ import Register from './pages/Register';
 import Transactions from './pages/Transactions';
 
 function App() {
-  // 1. Global state to track if the user is logged in
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate(); // Hook for internal navigation
 
   useEffect(() => {
     // Check if a token exists in local storage on load
@@ -21,14 +21,15 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     setIsLoggedIn(false);
-    // 2. Updated to include the /p159 prefix for the hard refresh
-    window.location.href = '/p159/login'; 
+    // Use navigate instead of window.location.href to avoid 404s
+    navigate('/login'); 
   };
 
   return (
-    // 3. ADDED basename here so all <Link> and <Route> tags 
-    // automatically prepend "/p159" to their URLs
-    <BrowserRouter basename="/p159">
+    <>
+      {/* NOTE: <BrowserRouter> was removed here because it's now in main.jsx.
+        We also don't need 'basename' anymore because HashRouter handles it!
+      */}
       
       {/* Primary Navigation Bar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
@@ -59,7 +60,7 @@ function App() {
       <div className="container">
         {/* Routing Logic */}
         <Routes>
-          {/* These paths are now relative to /p159/ */}
+          {/* Routes remain simple; the '#' handles the folder path automatically */}
           <Route path="/" element={isLoggedIn ? <Navigate to="/dashboard" /> : <Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -67,7 +68,7 @@ function App() {
           <Route path="/transactions" element={<Transactions />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </>
   );
 }
 
