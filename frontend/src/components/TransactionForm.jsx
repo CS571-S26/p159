@@ -4,9 +4,9 @@ import { Form, Button, Card, Row, Col, Alert } from 'react-bootstrap';
 const TransactionForm = ({ onTransactionAdded }) => {
     const [formData, setFormData] = useState({
         amount: '',
-        title: '',
-        category: 'Food', // Default category
-        date: new Date().toISOString().split('T')[0] // Defaults to today
+        title: '', // MUST be 'title' to match your Django model
+        category: 'Food',
+        date: new Date().toISOString().split('T')[0] // Defaults to YYYY-MM-DD
     });
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -24,6 +24,14 @@ const TransactionForm = ({ onTransactionAdded }) => {
         const token = localStorage.getItem('accessToken');
         const API_URL = "https://budgetly-backend-4y3s.onrender.com";
 
+        // Construct the payload ensuring field names are correct
+        const payload = {
+            title: formData.title,
+            amount: parseFloat(formData.amount),
+            category: formData.category,
+            date: formData.date
+        };
+
         try {
             const response = await fetch(`${API_URL}/api/transactions/`, {
                 method: 'POST',
@@ -31,35 +39,39 @@ const TransactionForm = ({ onTransactionAdded }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
-                // Clear the form
+                // Reset form on success
                 setFormData({
                     amount: '',
                     title: '',
                     category: 'Food',
                     date: new Date().toISOString().split('T')[0]
                 });
-                // Refresh the list in the parent component
+                
+                // Refresh the transaction list on the parent page
                 if (onTransactionAdded) onTransactionAdded();
             } else {
                 const data = await response.json();
-                setError(data.detail || "Failed to add transaction. Please check your inputs.");
+                // Display specific field errors if they exist (e.g., if title is still missing)
+                const errorMsg = data.title ? `Title: ${data.title[0]}` : (data.detail || "Check your inputs.");
+                setError(errorMsg);
             }
         } catch (err) {
-            setError("Network error. Please ensure the backend is live.");
+            setError("Network error. Ensure your Render backend is awake.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <Card className="shadow-sm mb-4">
+        <Card className="shadow-sm mb-4 border-0">
             <Card.Body>
-                <Card.Title className="mb-3">Add New Transaction</Card.Title>
-                {error && <Alert variant="danger">{error}</Alert>}
+                <Card.Title className="mb-3 fw-bold">Add New Transaction</Card.Title>
+                
+                {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
                 
                 <Form onSubmit={handleSubmit}>
                     <Row>
@@ -68,10 +80,10 @@ const TransactionForm = ({ onTransactionAdded }) => {
                                 <Form.Label>Description</Form.Label>
                                 <Form.Control
                                     type="text"
-                                    name="description"
-                                    value={formData.description}
+                                    name="title" // Crucial: must be 'title'
+                                    value={formData.title} // Crucial: must be 'title'
                                     onChange={handleChange}
-                                    placeholder="e.g. Groceries"
+                                    placeholder="e.g. Groceries, Rent"
                                     required
                                 />
                             </Form.Group>
@@ -123,9 +135,11 @@ const TransactionForm = ({ onTransactionAdded }) => {
                         </Col>
                     </Row>
 
-                    <Button variant="primary" type="submit" disabled={loading}>
-                        {loading ? 'Adding...' : 'Add Transaction'}
-                    </Button>
+                    <div className="d-grid gap-2">
+                        <Button variant="primary" type="submit" disabled={loading} className="fw-bold">
+                            {loading ? 'Adding...' : 'Add Transaction'}
+                        </Button>
+                    </div>
                 </Form>
             </Card.Body>
         </Card>
