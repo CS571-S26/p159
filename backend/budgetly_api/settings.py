@@ -12,11 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # --- SECURITY ---
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-default-key-for-dev")
 
-# On Render, we want DEBUG to be False. Locally, it defaults to True.
-DEBUG = os.getenv("DEBUG", "False") == "True"
+# FORCE DEBUG TO TRUE FOR LOCAL DEVELOPMENT
+DEBUG = True 
 
-# ALLOWED_HOSTS needs to include your Render URL
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+# ALLOWED_HOSTS needs to include local addresses
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "budgetly-backend-4y3s.onrender.com"]
 
 # --- APPS ---
 INSTALLED_APPS = [
@@ -65,36 +65,41 @@ TEMPLATES = [
 WSGI_APPLICATION = 'budgetly_api.wsgi.application'
 
 # --- DATABASE ---
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.getenv("DATABASE_URL", f"postgres://{os.getenv('POSTGRES_USER', 'postgres')}:{os.getenv('POSTGRES_PASSWORD', '12345')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('POSTGRES_DB', 'budgetly_db')}")
-    )
-}
+# Use Render's Postgres if available, otherwise fall back to local SQLite
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# --- PRODUCTION SECURITY (The "Fix" for 500 Errors) ---
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(default=DATABASE_URL)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# --- PRODUCTION SECURITY (Skipped when DEBUG is True) ---
 if not DEBUG:
-    # 1. Tell Django it's behind Render's HTTPS proxy
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     
-    # 2. CSRF Trusted Origins (Crucial for Admin Login)
-    # We read from Env, but provide defaults based on your previous messages
     CSRF_TRUSTED_ORIGINS = os.getenv(
         "CSRF_TRUSTED_ORIGINS", 
         "https://budgetly-backend-4y3s.onrender.com,https://cs571-s26.github.io"
     ).split(",")
 
-    # 3. Cross-Site Cookie Settings (Required for GitHub -> Render)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SAMESITE = 'None'
     CSRF_COOKIE_SAMESITE = 'None'
 
 # --- CORS SETTINGS ---
-CORS_ALLOWED_ORIGINS = os.getenv(
-    "CORS_ALLOWED_ORIGINS", 
-    "http://localhost:5173,https://cs571-s26.github.io"
-).split(",")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://cs571-s26.github.io",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 # --- REST FRAMEWORK & JWT ---
